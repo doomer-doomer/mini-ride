@@ -5,15 +5,10 @@ import 'package:mini_ride/provider/modelview.dart';
 import 'package:mini_ride/pages/search.dart';
 import 'package:provider/provider.dart';
 
-class OTP extends StatefulWidget {
+class OTP extends StatelessWidget {
   final otp;
-  const OTP({super.key, required this.otp});
+   OTP({super.key, required this.otp});
 
-  @override
-  State<OTP> createState() => _OTPState();
-}
-
-class _OTPState extends State<OTP> {
   final otpController = TextEditingController();
 
   @override
@@ -63,7 +58,7 @@ class _OTPState extends State<OTP> {
                           MaterialStateProperty.all(Colors.blueAccent),
                     ),
                     onPressed: () {
-                      if ((widget.otp).toString() == otpController.text) {
+                      if ((otp).toString() == otpController.text) {
                         model.updateStatus(true);
                         Navigator.pushAndRemoveUntil(
                             context,

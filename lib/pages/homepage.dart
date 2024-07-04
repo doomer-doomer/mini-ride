@@ -7,17 +7,8 @@ import 'package:mini_ride/provider/modelview.dart';
 import 'package:mini_ride/pages/verification/phone.dart';
 import 'package:provider/provider.dart';
 
-class Home extends StatefulWidget {
-  const Home({super.key});
-
-  @override
-  State<Home> createState() => _HomeState();
-}
-
-class _HomeState extends State<Home> {
-  onDidChangeDependencies() {
-    super.didChangeDependencies();
-  }
+class Home extends StatelessWidget {
+   Home({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -8,14 +8,9 @@ import 'package:mini_ride/pages/search.dart';
 import 'package:mini_ride/pages/verification/Otp.dart';
 import 'package:mini_ride/pages/verification/notify.dart';
 
-class Phone extends StatefulWidget {
-  const Phone({super.key});
+class Phone extends StatelessWidget {
+  Phone({super.key});
 
-  @override
-  State<Phone> createState() => _PhoneState();
-}
-
-class _PhoneState extends State<Phone> {
   TextEditingController phone = TextEditingController();
 
   verifyPhone() async {

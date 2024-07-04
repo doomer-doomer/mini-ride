@@ -23,20 +23,26 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+
   List<LatLng> routePoints = [];
+  List<LatLng> startToend = [];
+
+  List<LatLng> driverRoute = [];
   List<String> instruction = [];
   List<String> distances = [];
   List<String> durations = [];
   List<LatLng> nearestRoutePoints = [];
   String tdistances = '';
   String tdurations = '';
+  List<List> shortestDistance = [];
+  bool isRoute = true;
 
   @override
   void initState() {
     super.initState();
     ViewModel().getRoute(widget.start, widget.end).then((value) => {
           setState(() {
-            routePoints = value[0];
+            startToend = value[0];
             instruction = value[1];
             distances = value[2];
             durations = value[3];
@@ -44,11 +50,29 @@ class _MapScreenState extends State<MapScreen> {
             tdurations = value[5];
           })
         });
-    ViewModel().updateNearestRoutePoints(widget.start).then((value) => {
+    ViewModel().updateNearestRoutePoints(widget.start).then((value) {
+      setState(() {
+        nearestRoutePoints = value;
+      });
+      for (LatLng point in nearestRoutePoints) {
+        ViewModel().getRoute(widget.start, point).then((value) {
           setState(() {
-            nearestRoutePoints = value;
-          })
+            shortestDistance.add(
+                [value[0], value[1], value[2], value[3], value[4], value[5]]);
+          });
         });
+      }
+    });
+  }
+
+  List<dynamic> sortNearesetRoutePoints(List<List<dynamic>> points) {
+    points.sort((a, b) {
+      double distanceA = double.parse(a[4]);
+      double distanceB = double.parse(b[4]);
+      return distanceA.compareTo(distanceB);
+    });
+
+    return points.first;
   }
 
   @override
@@ -58,7 +82,7 @@ class _MapScreenState extends State<MapScreen> {
       textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: routePoints.isNotEmpty
+        body: startToend.isNotEmpty
             ? Stack(children: [
                 FlutterMap(
                   mapController: _mapController,
@@ -105,6 +129,18 @@ class _MapScreenState extends State<MapScreen> {
                           child: GestureDetector(
                             onTap: () {
                               _mapController.move(widget.end, 15.0);
+                              setState(() {
+                                model
+                                    .getRoute(widget.start, widget.end)
+                                    .then((value) => {
+                                          startToend = value[0],
+                                          instruction = value[1],
+                                          distances = value[2],
+                                          durations = value[3],
+                                          tdistances = value[4],
+                                          tdurations = value[5]
+                                        });
+                              });
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                   content: Text(
                                       'End Location : ${widget.end.latitude}, ${widget.end.longitude}')));
@@ -123,14 +159,21 @@ class _MapScreenState extends State<MapScreen> {
                     MarkerLayer(
                       markers: nearestRoutePoints.isNotEmpty
                           ? nearestRoutePoints
-                              // Flatten and take only the first 5 points from each route
                               .map((point) => Marker(
                                     width: 80.0,
                                     height: 80.0,
                                     point: point,
                                     child: GestureDetector(
-                                      onTap: () {
-                                        _mapController.move(point, 18.0);
+                                      onTap: () async {
+                                        _mapController.move(widget.start, 15.0);
+                                        model
+                                            .getRoute(widget.start, point)
+                                            .then((value) => {
+                                                  setState(() {
+                                                    routePoints = value[0];
+                                                  })
+                                                });
+
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
@@ -165,9 +208,23 @@ class _MapScreenState extends State<MapScreen> {
                     PolylineLayer(
                       polylines: [
                         Polyline(
-                          points: routePoints,
+                          points: startToend,
                           strokeWidth: 4.0,
                           color: Colors.blue,
+                        ),
+                      ],
+                    ),
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: shortestDistance.length == 5
+                              ? sortNearesetRoutePoints(shortestDistance)
+                                      .isNotEmpty
+                                  ? routePoints
+                                  : shortestDistance[0][0]
+                              : [],
+                          strokeWidth: 4.0,
+                          color: Colors.purple,
                         ),
                       ],
                     ),
@@ -192,49 +249,183 @@ class _MapScreenState extends State<MapScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 15.0,
-                                      left: 15.0,
-                                      right: 15.0,
-                                      bottom: 0),
-                                  child: Text(
-                                    double.parse(tdistances)
-                                            .toStringAsFixed(1) +
-                                        ' km, ' +
-                                        ((double.parse(tdurations) ~/ 60) > 0
-                                            ? (double.parse(tdurations) ~/ 60)
-                                                    .toStringAsFixed(0) +
-                                                ' hr '
-                                            : '') +
-                                        (double.parse(tdurations) % 60)
-                                            .toStringAsFixed(0) +
-                                        ' min',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: ListView.builder(
-                                    controller: scrollController,
-                                    itemCount: instruction
-                                        .length, // Ensure 'instructions' is a valid list in your state
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        subtitle: Text(
-                                          '${distances[index]} m, ${durations[index]} s',
-                                        ),
-                                        title: Text(
-                                          instruction[index],
-                                          style: TextStyle(
-                                            fontSize: 14,
+                                Container(
+                                  height: 50,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 5, bottom: 0),
+                                        child: TextButton(
+                                          onPressed: () {
+                                            _mapController.move(
+                                                widget.start, 15.0);
+                                            setState(() {
+                                              isRoute = true;
+                                            });
+                                          },
+                                          child: Text(
+                                            'Route',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue,
+                                            ),
                                           ),
                                         ),
-                                      );
-                                    },
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 5.0, bottom: 0),
+                                        child: VerticalDivider(
+                                          thickness: 2,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 5.0, bottom: 0),
+                                        child: TextButton(
+                                          onPressed: () {
+                                            _mapController.move(
+                                                widget.start, 15.0);
+                                            setState(() {
+                                              isRoute = false;
+                                            });
+                                          },
+                                          child: Text(
+                                            'Book',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                )
+                                ),
+                                Divider(),
+                                isRoute
+                                    ? Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 15.0,
+                                            left: 15.0,
+                                            right: 15.0,
+                                            bottom: 0),
+                                        child: Text(
+                                          double.parse(tdistances)
+                                                  .toStringAsFixed(1) +
+                                              ' km, ' +
+                                              ((double.parse(tdurations) ~/
+                                                          60) >
+                                                      0
+                                                  ? (double.parse(tdurations) ~/
+                                                              60)
+                                                          .toStringAsFixed(0) +
+                                                      ' hr '
+                                                  : '') +
+                                              (double.parse(tdurations) % 60)
+                                                  .toStringAsFixed(0) +
+                                              ' min',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      )
+                                    : Padding(
+                                        padding: EdgeInsets.only(
+                                            top: 15.0,
+                                            left: 15.0,
+                                            right: 15.0,
+                                            bottom: 0),
+                                        child: Text(
+                                          "Available Cabs -> ${shortestDistance.length}",
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ),
+                                isRoute
+                                    ? Expanded(
+                                        child: ListView.builder(
+                                          controller: scrollController,
+                                          itemCount: instruction
+                                              .length, // Ensure 'instructions' is a valid list in your state
+                                          itemBuilder: (context, index) {
+                                            return ListTile(
+                                              subtitle: Text(
+                                                '${distances[index]} m, ${durations[index]} s',
+                                              ),
+                                              title: Text(
+                                                instruction[index],
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : Expanded(
+                                        child: ListView.builder(
+                                          controller: scrollController,
+                                          itemCount: shortestDistance
+                                              .length, // Ensure 'instructions' is a valid list in your state
+                                          itemBuilder: (context, index) {
+                                            return ListTile(
+                                                leading: Icon(
+                                                    Icons.local_taxi_sharp),
+                                                subtitle: Text(
+                                                  '${double.parse(shortestDistance[index][4]).toStringAsFixed(1)} km, ${double.parse(shortestDistance[index][5]).toStringAsFixed(0)} min',
+                                                ),
+                                                title: Row(
+                                                  children: [
+                                                    Text(
+                                                      "Driver ${index + 1}",
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                    Spacer(),
+                                                    Text(
+                                                      '₹ ' +
+                                                          ((double.parse(shortestDistance[
+                                                                              index]
+                                                                          [4]) +
+                                                                      double.parse(
+                                                                          shortestDistance[index]
+                                                                              [
+                                                                              5]) +
+                                                                      double.parse(
+                                                                          tdistances) +
+                                                                      double.parse(
+                                                                          tdurations)) *
+                                                                  5)
+                                                              .toStringAsFixed(
+                                                                  0),
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                onTap: () {
+                                                  _mapController.move(
+                                                      shortestDistance[index][0]
+                                                          .last,
+                                                      16.0);
+                                                  setState(() {
+                                                    routePoints =
+                                                        shortestDistance[index]
+                                                            [0];
+                                                  });
+                                                });
+                                          },
+                                        ),
+                                      )
                               ],
                             ),
                           );

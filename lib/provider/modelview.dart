@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:mini_ride/model/LocationModel.dart';
 import 'package:mini_ride/model/SearchModel.dart';
 import 'package:mini_ride/model/UserModel.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ViewModel extends ChangeNotifier {
   UserModel _userModel = UserModel();
@@ -40,6 +41,10 @@ class ViewModel extends ChangeNotifier {
       return routePoints;
     }
     return [];
+  }
+
+  Future<Position> getCurrentLocation() async {
+    return await _locationModel.determinePosition();
   }
 
   void updatePhoneNumber(String phoneNumber) {

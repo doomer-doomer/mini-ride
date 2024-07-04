@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'dart:developer';
@@ -137,40 +138,71 @@ class _SearchLocationState extends State<SearchLocation> {
                 ),
               ),
             ),
+            Card(
+              child: ListTile(
+                tileColor: Colors.white,
+                leading: Icon(Icons.my_location),
+                title: Text('Current Location'),
+                subtitle: Text('Use current location'),
+                onTap: () async {
+                  if (count == 0) {
+                    Position position = await model.getCurrentLocation();
+                    initialLocationController.text = 'Current Location';
+                    setState(() {
+                      start = LatLng(position.latitude, position.longitude);
+                      initial_pos = 'Current Location';
+                    });
+                  }
+                  if (count == 1) {
+                    Position position = await model.getCurrentLocation();
+                    finalLocationController.text = 'Current Location';
+                    setState(() {
+                      end = LatLng(position.latitude, position.longitude);
+                      final_pos = 'Current Location';
+                    });
+                  }
+                },
+              ),
+            ),
             loading
                 ? Expanded(child: Center(child: CircularProgressIndicator()))
                 : Expanded(
-                    child: ListView.builder(
-                      itemCount: searchResults.length,
-                      itemBuilder: (context, index) {
-                        return Column(
-                          children: [
-                            ListTile(
-                              leading: Icon(Icons.location_searching),
-                              subtitle: Text(searchResults[index]),
-                              title: Text(name[index]),
-                              onTap: () {
-                                if (count == 0) {
-                                  initialLocationController.text =
-                                      searchResults[index];
-                                  setState(() {
-                                    start = latlng[index];
-                                    initial_pos = searchResults[index];
-                                  });
-                                } else {
-                                  finalLocationController.text =
-                                      searchResults[index];
-                                  setState(() {
-                                    end = latlng[index];
-                                    final_pos = searchResults[index];
-                                  });
-                                }
-                              },
-                            ),
-                            Divider(),
-                          ],
-                        );
-                      },
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 12.0, right: 12.0, top: 8.0
+                      ),
+                      child: ListView.builder(
+                        itemCount: searchResults.length,
+                        itemBuilder: (context, index) {
+                          return Column(
+                            children: [
+                              ListTile(
+                                leading: Icon(Icons.location_searching),
+                                subtitle: Text(searchResults[index]),
+                                title: Text(name[index]),
+                                onTap: () {
+                                  if (count == 0) {
+                                    initialLocationController.text =
+                                        searchResults[index];
+                                    setState(() {
+                                      start = latlng[index];
+                                      initial_pos = searchResults[index];
+                                    });
+                                  } else {
+                                    finalLocationController.text =
+                                        searchResults[index];
+                                    setState(() {
+                                      end = latlng[index];
+                                      final_pos = searchResults[index];
+                                    });
+                                  }
+                                },
+                              ),
+                              Divider(),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
             Padding(
